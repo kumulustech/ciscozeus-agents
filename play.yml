@@ -1,0 +1,37 @@
+---
+- hosts: all
+  tasks:
+  - name: get install script for treasure-data fluent agent
+    get_url: url=http://toolbelt.treasuredata.com/sh/install-{{ansible_lsb['id']|lower}}-{{ansible_lsb['codename']}}-td-agent2.sh dest=/root/agent.sh mode=0755
+  - name: run install script
+    shell: /root/agent.sh
+    args:
+      executable: /bin/sh
+  - name: get ciscozeus config file
+    get_url: url=http://ciscozeus.io/td-agent.conf dest=/etc/td-agent/
+    notify: restart td-agent
+  - name: install ruby and gem
+    apt: pkg={{item}} state=installed
+    with_items:
+    - gem
+    - ruby-dev
+    - collectd
+  - name: use td-agent-gem to install reformer plugins
+    command: td-agent-gem install fluent-plugin-record-reformer
+  - name: use td-agent-gem to install forward plugins
+    command: td-agent-gem install fluent-plugin-secure-forward
+  - name: configure syslog
+    get_url: url=http://ciscozeus.io/10-rsyslog.conf dest=/etc/rsyslog.d/
+    notify: restart rsyslogd
+  - name: configure collectd
+    get_url: url=http://ciscozeus.io/collectd.conf dest=/etc/collectd/
+    notify: restart collectd
+  - name: replace "USERNAME" with username variable
+    lineinfile: dest=/etc/td-agent/td-agent.conf regexp='^(.*)<YOUR USERNAME HERE>-<YOUR TOKEN HERE>(.*)' line="\1{{username}}-{{token}}\2" backrefs=yes 
+  handlers:
+  - name: restart collectd
+    service: name=collectd state=restarted
+  - name: restart rsyslog
+    service: name=rsyslog state=restarted
+  - name: restart td-agent
+    service: name=td-agent state=restarted
