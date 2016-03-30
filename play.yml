@@ -26,8 +26,10 @@
   - name: configure collectd
     get_url: url=http://ciscozeus.io/collectd.conf dest=/etc/collectd/
     notify: restart collectd
-  - name: replace "USERNAME" with username variable
-    lineinfile: dest=/etc/td-agent/td-agent.conf regexp='^(.*)<YOUR USERNAME HERE>-<YOUR TOKEN HERE>(.*)' line="\1{{username}}-{{token}}\2" backrefs=yes 
+  - name: replace "USERNAME" with username environment variable
+    replace: dest=/etc/td-agent/td-agent.conf regexp='<YOUR USERNAME HERE>' replace="{{lookup ('env','USERNAME')}}"
+  - name: replace "TOKEN" with token environment variable
+    replace: dest=/etc/td-agent/td-agent.conf regexp='<YOUR TOKEN HERE>' replace="{{lookup ('env','TOKEN')}}"
   handlers:
   - name: restart collectd
     service: name=collectd state=restarted
